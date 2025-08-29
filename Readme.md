@@ -1,0 +1,1 @@
+Metaphor-based jailbreaking attacks on T2I models
