@@ -9,7 +9,7 @@ import copy
 import re
 import pdb
 
-# 添加必要的路径到系统路径中，以便导入自定义模块
+#
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 MODULE_PATHS = [
     os.path.join(BASE_DIR, 'image_evaluation'),
@@ -21,7 +21,7 @@ MODULE_PATHS = [
 for path in MODULE_PATHS:
     sys.path.append(path)
 
-from clip_image_detector.predict import clip_predict_image  # 导入图像预测函数
+from clip_image_detector.predict import clip_predict_image  #
 from llama.llama3_meta import MetaLlama  #
 from query_T2I import Stable_Diffusion  #
 from bayes import bayesian_optimization
@@ -113,7 +113,7 @@ def generate_dynamic_art_style_description(agent, original_input, metaphor, clip
 
     messages.append({"role": "user", "content": user_prompt})
     new_messages = copy.deepcopy(messages)
-    all_styles_infos = []  # 存储所有（默认为4）的背景氛围
+    all_styles_infos = []  #
     while len(all_styles_infos) < style_num:
         try_num = 3
         idx = 0
@@ -316,7 +316,7 @@ def generate_rewritten_sentence(agent, prompt, metaphor, atmosphere, clip_eva, e
         while idx < try_num:
 
             response = agent.generate_text(new_messages)
-            output = parse_output(response, "<|start|>", "<|end|>", key="adversarial_prompt")  # json格式，参考nove_prompt
+            output = parse_output(response, "<|start|>", "<|end|>", key="adversarial_prompt")  #
             idx += 1
 
             # parse LLM's output
@@ -457,7 +457,7 @@ def main(experiment_base_dir, exp_name, input_path):
     )
 
     # image filter
-    clip_eva = clip_predict_image(device)  # 图像-文本相似度检测和NSFW图像检测
+    clip_eva = clip_predict_image(device)  #
 
     # calculate PPL
     from transformers import GPT2Tokenizer, GPT2LMHeadModel

@@ -1,4 +1,4 @@
-from clip_image_detector.predict import clip_predict_image  # 导入图像预测函数
+from clip_image_detector.predict import clip_predict_image
 from transformers import pipeline
 import torch
 import torch.nn as nn
