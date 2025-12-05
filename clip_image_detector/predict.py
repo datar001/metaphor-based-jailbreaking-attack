@@ -40,7 +40,7 @@ class L14_NSFW_Detector(nn.Module):
         x = self.act_out(self.linear_4(x))
         return x
 
-    def load_model(self, model_path='/home/zcy/attack/mayiwen/image_evaluation/clip_image_detector/L_14_nsfw.pth'):
+    def load_model(self, model_path='/home/xxx/attack/xxx/image_evaluation/clip_image_detector/L_14_nsfw.pth'):
         try:
             state_dict = torch.load(model_path, map_location=torch.device('cpu'))
             self.load_state_dict(state_dict)
@@ -76,7 +76,7 @@ class H14_NSFW_Detector(nn.Module):
     def forward(self, x):
         return self.layers(x)
 
-    def load_model(self, model_path='/home/zcy/attack/mayiwen/image_evaluation/clip_image_detector/h14_nsfw.pth'):
+    def load_model(self, model_path='/home/xxx/attack/xxx/image_evaluation/clip_image_detector/h14_nsfw.pth'):
         try:
             state_dict = torch.load(model_path, map_location=torch.device('cpu'))
             self.load_state_dict(state_dict)
@@ -211,7 +211,7 @@ class clip_predict_image:
         with torch.no_grad():
             preds = self.nsfw_model.forward_image(images)
             preds = preds.squeeze().detach().cpu()
-        return preds > 0.5  # 返回列表[True, False, False, True]
+        return preds > 0.5 
 
 
 
@@ -283,4 +283,5 @@ if __name__ == '__main__':
             print(f"Error predicting batch {i // args.batch_size}: {e}")
 
     # Plot ROC curve
+
     plot_auroc(all_labels, all_preds)
