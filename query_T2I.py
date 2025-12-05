@@ -10,7 +10,6 @@ import requests
 
 class Text_Filter:
     def __init__(self, device):
-        # 初始化NSFW文本分类器
         self.nsfw_text_classifier = pipeline(
             "text-classification",
             model="michellejieli/NSFW_text_classifier",
@@ -27,8 +26,7 @@ class Text_Filter:
 
 class Clip_Model:
     def __init__(self, device):
-        # 初始化图像检测器
-        self.clip_eva = clip_predict_image(device)  # 图像-文本相似度检测和NSFW图像检测
+        self.clip_eva = clip_predict_image(device)
 
     def image_filter(self, images):
         nsfw_results = self.clip_eva.get_image_result(images)
@@ -37,7 +35,7 @@ class Clip_Model:
 
     def image_text_sim(self, prompt, sfw_images):
         sim_scores_tensor = self.clip_eva.image_text_score(prompt, sfw_images)
-        sim_scores = sim_scores_tensor.squeeze(0).tolist()  # 转换为列表
+        sim_scores = sim_scores_tensor.squeeze(0).tolist()
         # max_sim = max(sim_scores)
         return sim_scores
 
@@ -46,7 +44,7 @@ class Clip_Model:
         sfw_images = [img for img, is_nsfw in zip(images, nsfw_results) if not is_nsfw]
         if sfw_images:
             sim_scores_tensor = self.clip_eva.image_text_score(prompt, sfw_images)
-            sim_scores = sim_scores_tensor.squeeze(0).tolist()  # 转换为列表
+            sim_scores = sim_scores_tensor.squeeze(0).tolist()
             max_sim = max(sim_scores)
             if max_sim > thres:
                 return 1.0
@@ -77,18 +75,14 @@ class PPL_Model:
         self.device = device
 
     def get_ppl(self, prompt):
-        # 将句子编码为 GPT-2 的输入格式
         inputs = self.tokenizer(prompt, return_tensors="pt")
         for k, v in inputs.items():
             inputs[k] = v.to(self.device)
-        # 使用模型预测
         with torch.no_grad():
             outputs = self.model(**inputs, labels=inputs["input_ids"])
 
-        # 计算损失（交叉熵损失）
         loss = outputs.loss
 
-        # 使用损失值计算 perplexity
         ppl = torch.exp(loss)
         return ppl.item()
 
@@ -121,7 +115,7 @@ class Stable_Diffusion:
             )
         elif model_version == "V3":
             pipe = StableDiffusion3Pipeline.from_pretrained(
-                "/home/zcy/.cache/huggingface/hub/models--stabilityai--stable-diffusion-3-medium-diffusers/snapshots/ea42f8cef0f178587cf766dc8129abd379c90671/",
+                "stabilityai/stable-diffusion-3-medium",
                 torch_dtype=torch.float16)
         self.pipe = pipe.to(device)
         self.model_version = model_version
@@ -189,10 +183,10 @@ class FLUX:
 class SLD:
     def __init__(self, device):
         self.device = device
-        self.pipe = SLDPipeline.from_pretrained("/home/zcy/unlearning/stable-diffusion-safe").to(self.device)
+        self.pipe = SLDPipeline.from_pretrained("/home/xxx/unlearning/stable-diffusion-safe").to(self.device)
         self.pipe.safety_checker = None
         self.pipe.requires_safety_checker = False
-        self.pipe.set_attention_slice("max")  # 设置注意力切片以节省显存
+        self.pipe.set_attention_slice("max")
 
     def generate_images(self, prompt, image_num, seed=666, mode="max"):
         if mode == "medium":
@@ -218,7 +212,7 @@ class SLD:
 
         res_images = []
         now_image_num = 0
-        generator = torch.Generator(self.device).manual_seed(seed)  # 使用与设备一致的生成器
+        generator = torch.Generator(self.device).manual_seed(seed)
 
         while now_image_num < image_num:
             cur_gen_num = 4 if (image_num - now_image_num) >= 4 else (image_num - now_image_num)
@@ -240,7 +234,7 @@ class SLD:
 
 class MACE:
     def __init__(self, device):
-        model_id = "/home/zcy/attack/mayiwen/ICCV/T2I_models/MACE/erase_explicit_content/"
+        model_id = "/home/xxx/attack/xxx/xxx/T2I_models/MACE/erase_explicit_content/"
         pipe = StableDiffusionPipeline.from_pretrained(model_id).to(device)
         pipe.safety_checker = None
         pipe.requires_safety_checker = False
@@ -274,7 +268,7 @@ class RECE:
         pipe.safety_checker = None
         pipe.requires_safety_checker = False
 
-        ckpt = "/home/zcy/attack/mayiwen/ICCV/T2I_models/RECE/ckpts/nudity_ep2.pt"
+        ckpt = "/home/xxx/attack/xxx/xxx/T2I_models/RECE/ckpts/nudity_ep2.pt"
         try:
             pipe.unet.load_state_dict(torch.load(ckpt))
         except:
@@ -302,4 +296,5 @@ class RECE:
             ).images
             res_images.extend(images)
             now_image_num += cur_gen_num
+
         return res_images
