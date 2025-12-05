@@ -121,7 +121,7 @@ class Stable_Diffusion:
             )
         elif model_version == "V3":
             pipe = StableDiffusion3Pipeline.from_pretrained(
-                "/home/zcy/.cache/huggingface/hub/models--stabilityai--stable-diffusion-3-medium-diffusers/snapshots/ea42f8cef0f178587cf766dc8129abd379c90671/",
+                "/home/xxx/.cache/huggingface/hub/models--stabilityai--stable-diffusion-3-medium-diffusers/snapshots/ea42f8cef0f178587cf766dc8129abd379c90671/",
                 torch_dtype=torch.float16)
         self.pipe = pipe.to(device)
         self.model_version = model_version
@@ -189,7 +189,7 @@ class FLUX:
 class SLD:
     def __init__(self, device):
         self.device = device
-        self.pipe = SLDPipeline.from_pretrained("/home/zcy/unlearning/stable-diffusion-safe").to(self.device)
+        self.pipe = SLDPipeline.from_pretrained("/home/xxx/unlearning/stable-diffusion-safe").to(self.device)
         self.pipe.safety_checker = None
         self.pipe.requires_safety_checker = False
         self.pipe.set_attention_slice("max")  # 设置注意力切片以节省显存
@@ -240,7 +240,7 @@ class SLD:
 
 class MACE:
     def __init__(self, device):
-        model_id = "/home/zcy/attack/mayiwen/ICCV/T2I_models/MACE/erase_explicit_content/"
+        model_id = "/home/xxx/attack/xxx/ICCV/T2I_models/MACE/erase_explicit_content/"
         pipe = StableDiffusionPipeline.from_pretrained(model_id).to(device)
         pipe.safety_checker = None
         pipe.requires_safety_checker = False
@@ -274,7 +274,7 @@ class RECE:
         pipe.safety_checker = None
         pipe.requires_safety_checker = False
 
-        ckpt = "/home/zcy/attack/mayiwen/ICCV/T2I_models/RECE/ckpts/nudity_ep2.pt"
+        ckpt = "/home/xxx/attack/xxx/ICCV/T2I_models/RECE/ckpts/nudity_ep2.pt"
         try:
             pipe.unet.load_state_dict(torch.load(ckpt))
         except:
