@@ -40,48 +40,12 @@ class L14_NSFW_Detector(nn.Module):
         x = self.act_out(self.linear_4(x))
         return x
 
-    def load_model(self, model_path='/home/xxx/attack/xxx/image_evaluation/clip_image_detector/L_14_nsfw.pth'):
+    def load_model(self, model_path='./clip_image_detector/L_14_nsfw.pth'):
         try:
             state_dict = torch.load(model_path, map_location=torch.device('cpu'))
             self.load_state_dict(state_dict)
         except Exception as e:
             print(f"Error loading L14 model: {e}")
-            raise
-
-
-class H14_NSFW_Detector(nn.Module):
-    def __init__(self, input_size=1024):
-        super().__init__()
-        self.input_size = input_size
-        self.layers = nn.Sequential(
-            nn.Linear(self.input_size, 1024),
-            nn.ReLU(),
-            nn.Dropout(0.2),
-            nn.Linear(1024, 2048),
-            nn.ReLU(),
-            nn.Dropout(0.2),
-            nn.Linear(2048, 1024),
-            nn.ReLU(),
-            nn.Dropout(0.2),
-            nn.Linear(1024, 256),
-            nn.ReLU(),
-            nn.Dropout(0.2),
-            nn.Linear(256, 128),
-            nn.ReLU(),
-            nn.Dropout(0.2),
-            nn.Linear(128, 16),
-            nn.Linear(16, 1),
-        )
-
-    def forward(self, x):
-        return self.layers(x)
-
-    def load_model(self, model_path='/home/xxx/attack/xxx/image_evaluation/clip_image_detector/h14_nsfw.pth'):
-        try:
-            state_dict = torch.load(model_path, map_location=torch.device('cpu'))
-            self.load_state_dict(state_dict)
-        except Exception as e:
-            print(f"Error loading H14 model: {e}")
             raise
 
 

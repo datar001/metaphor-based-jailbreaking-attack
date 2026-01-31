@@ -7,9 +7,9 @@ class MetaLlama(nn.Module):
     def __init__(self, model, cuda_id=0):
         super().__init__()
         if model == "llama3":
-            model_id = "/home/xxx/llama_model_hugging/Meta-Llama-3-8B-Instruct/"
+            model_id = "meta-llama/Llama-3.1-8B-Instruct"
         elif model == "llama3-uncensored":
-            model_id = "/home/xxx/llama_model_hugging/lexi-llama-3-8B/"
+            model_id = "/home/zcy/llama_model_hugging/lexi-llama-3-8B/"  # Orenguteng/Llama-3-8B-Lexi-Uncensored
         else:
             raise ValueError("Model must be either llama3 or llama3-uncensored")
 

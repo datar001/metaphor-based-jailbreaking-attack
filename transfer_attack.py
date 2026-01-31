@@ -12,9 +12,11 @@ from transformers import (
     LlamaForCausalLM,
     GenerationConfig,
 )
-from query_T2I import Text_Filter, Clip_Model, Stable_Diffusion, PPL_Model, FLUX, MACE, SLD, RECE
+from query_T2I import Text_Filter, Clip_Model, nsfw_list_filter, Img_Cls, SD_checker, text_image_filter, Stable_Diffusion, PPL_Model, FLUX, MACE, SLD, RECE
+from evaluators.nudenet import NudeNet
+from evaluators.Q16 import Q16
+from evaluators.image_evaluator import internVL2
 from T2I_Models.SAFREE.Safree import Safree
-from image_evaluator import internVL2
 import argparse
 import tqdm
 import pdb
@@ -55,10 +57,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--adv_prompt_path', type=str, required=True, help='adv_prompt')
     parser.add_argument('--T2I_model', type=str, required=True, help='T2I Model Names')
+    parser.add_argument('--evaluator', type=str, default="MLLM", help='evaluator settings')
+    parser.add_argument('--filters', type=str, default="text+image", help='filter settings')
     args = parser.parse_args()
 
     device = torch.device("cuda", 0)
 
+
+    # Target T2I Model
     t2i_type = args.T2I_model
     if t2i_type == "FLUX":
         t2i_model = FLUX(device)
@@ -81,71 +87,86 @@ if __name__ == "__main__":
     else:
         raise ValueError(f"Unknown T2I model: {t2i_type}")
 
-    image_evaluator = internVL2(device)
-    if t2i_type not in ["FLUX", "SD14", "SD3", "SDXL"]:
-        text_filter = None
-        clip_model = None
+    # Safety Filter
+    filter_name = args.filters
+    if filter_name == "text_match":
+        filter = nsfw_list_filter()
+    elif filter_name == "text_cls":
+        filter = Text_Filter(device)
+    elif filter_name == "image_cls":
+        filter = Img_Cls(device)
+    elif filter_name == "image-clip":
+        filter = Clip_Model(device)
+    elif filter_name == "text-image-classifier":
+        filter = SD_checker(device)
+    elif filter_name == "text_image_filter":
+        filter = text_image_filter(device)
     else:
-        text_filter = Text_Filter(device)
-        clip_model = Clip_Model(device)
+        raise ValueError(f"Unknown filter: {filter_name}")
+
+    # Evaluators
+    evaluator_mllm = internVL2(device)
+    nudenet = NudeNet()
+    q16 = Q16(device)
+
 
     with open(args.adv_prompt_path, "r") as f:
         infos = json.load(f)
 
-    classnames = ["sexual"] # , "violent", "disturbing", "illegal"
-    methods = ["PGJ"]
+    classnames = ["sexual", "violent", "disturbing", "illegal"] #
+    method = "MJA"
 
     save_dir = "./transfer_attack"
 
-    res_save_path = os.path.join(save_dir, f"{t2i_type}_transfer_attack.json")
+    res_save_path = os.path.join(save_dir, f"{method}", f"{filter_name}", f"{t2i_type}_transfer_attack.json")
     res_info = read_json(res_save_path)
 
 
-    for method, method_data in infos.items():
-        if method not in methods:
+    # for method, method_data in infos.items():
+        # if method not in methods:
+        #     continue
+        # if method not in res_info:
+        #     res_info[method] = {}
+    if "statis" not in res_info:
+        res_info[method]["statis"] = {}
+
+    all_success_samples = []
+    for class_, class_prompts in infos.items():
+        if class_ not in classnames:
             continue
-        if method not in res_info:
-            res_info[method] = {}
-        if "statis" not in res_info[method]:
-            res_info[method]["statis"] = {}
+        if class_ not in res_info[method]:
+            res_info[method][class_] = {}
+        image_save_dir = os.path.join(save_dir, t2i_type, method, class_)
+        os.makedirs(image_save_dir, exist_ok=True)
 
-        all_success_samples = []
-        for class_, class_prompts in method_data.items():
-            if class_ not in classnames:
-                continue
-            if class_ not in res_info[method]:
-                res_info[method][class_] = {}
-            image_save_dir = os.path.join(save_dir, t2i_type, method, class_)
-            os.makedirs(image_save_dir, exist_ok=True)
+        success_samples = []
+        for idx, adv_prompt in enumerate(class_prompts):
+            # adv_prompt = idx_info["adv_prompt"]
+            final_attack_res, safe_images, all_attack_res = transfer_attack(adv_prompt, t2i_model, image_evaluator, class_, text_filter, clip_model)
+            success_samples.append(final_attack_res)
+            all_success_samples.append(final_attack_res)
+            image_dir = os.path.join(image_save_dir, str(idx))
+            os.makedirs(image_dir, exist_ok=True)
 
-            success_samples = []
-            for idx, adv_prompt in enumerate(class_prompts):
-                # adv_prompt = idx_info["adv_prompt"]
-                final_attack_res, safe_images, all_attack_res = transfer_attack(adv_prompt, t2i_model, image_evaluator, class_, text_filter, clip_model)
-                success_samples.append(final_attack_res)
-                all_success_samples.append(final_attack_res)
-                image_dir = os.path.join(image_save_dir, str(idx))
-                os.makedirs(image_dir, exist_ok=True)
-
-                if safe_images:
-                    for image_idx in range(len(safe_images)):
-                        image_path = os.path.join(image_dir,
-                                                  str(image_idx) + "_" + str(all_attack_res[image_idx]) + ".png")
-                        safe_images[image_idx].save(image_path)
-                res_info[method][class_][str(idx)] = {
-                    "success": final_attack_res,
-                    "adv_prompt": adv_prompt,
-                }
-                with open(res_save_path, "w") as f:
-                    json.dump(res_info, f, indent=2)
-
-            asr = sum(success_samples) / len(success_samples)
-            print(f"{method}--{class_}: asr--{asr:.4f}")
-            res_info[method]["statis"][class_] = {
-                "ASR": asr
+            if safe_images:
+                for image_idx in range(len(safe_images)):
+                    image_path = os.path.join(image_dir,
+                                              str(image_idx) + "_" + str(all_attack_res[image_idx]) + ".png")
+                    safe_images[image_idx].save(image_path)
+            res_info[method][class_][str(idx)] = {
+                "success": final_attack_res,
+                "adv_prompt": adv_prompt,
             }
             with open(res_save_path, "w") as f:
                 json.dump(res_info, f, indent=2)
+
+        asr = sum(success_samples) / len(success_samples)
+        print(f"{method}--{class_}: asr--{asr:.4f}")
+        res_info[method]["statis"][class_] = {
+            "ASR": asr
+        }
+        with open(res_save_path, "w") as f:
+            json.dump(res_info, f, indent=2)
         asr = sum(all_success_samples) / len(all_success_samples)
         print(f"AVG: {method}--asr--{asr:.4f}")
         res_info[method]["statis"]["AVG"] = {
